@@ -1,0 +1,34 @@
+From 4ad1d955667543ec5bc9645405738dfed0cfc30a Mon Sep 17 00:00:00 2001
+From: Zhixiong Chi <zhixiong.chi@windriver.com>
+Date: Mon, 27 Apr 2026 06:42:15 +0000
+Subject: [PATCH] feat(wrlinux): Add Vendor_PR support for WRLinux LTS25
+
+Signed-off-by: Zhixiong Chi <zhixiong.chi@windriver.com>
+---
+ pkg/detector/ospkg/wrlinux/wrlinux.go | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/pkg/detector/ospkg/wrlinux/wrlinux.go b/pkg/detector/ospkg/wrlinux/wrlinux.go
+index 5d27d38b9..d784b045d 100644
+--- a/pkg/detector/ospkg/wrlinux/wrlinux.go
++++ b/pkg/detector/ospkg/wrlinux/wrlinux.go
+@@ -40,6 +40,7 @@ var (
+ 		"10.22": time.Date(2027, 6, 30, 23, 59, 59, 0, time.UTC),
+ 		"10.23": time.Date(2028, 6, 30, 23, 59, 59, 0, time.UTC),
+ 		"10.24": time.Date(2029, 6, 30, 23, 59, 59, 0, time.UTC),
++		"10.25": time.Date(2030, 6, 30, 23, 59, 59, 0, time.UTC),
+ 	}
+ )
+ 
+@@ -107,7 +108,7 @@ func (s *Scanner) Detect(ctx context.Context, osVer string, _ *ftypes.Repository
+ 			}
+ 
+ 			release := OsVerToRelease(osVer)
+-			if release == "10.24" {
++			if release == "10.24" || release == "10.25" {
+ 				if pkgVerLT(vuln.InstalledVersion, adv.FixedVersion) {
+ 					vuln.FixedVersion = adv.FixedVersion
+ 					vulns = append(vulns, vuln)
+-- 
+2.53.0
+
