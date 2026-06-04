@@ -1,0 +1,139 @@
+From 8e6d577a7aad9b0f10c636c8eb80be94d363f89b Mon Sep 17 00:00:00 2001
+From: Yi Zhao <yi.zhao@windriver.com>
+Date: Thu, 6 Feb 2025 21:32:20 +0800
+Subject: [PATCH 3/3] feat(wrlinux): Add Vendor_PR support for WRLinux LTS24+
+
+For Vendor_PR-enabled releases (LTS24 and later, i.e. release >= 10.24),
+WR Trivy needs to directly compare the installed package versions against
+the recorded fix versions in the Trivy database.
+
+FixedVersion supports three formats:
+  1. RCPL format: "10.24.33.7"
+  2. PR format: "wr2402"
+  3. Mixed format: "10.24.33.7,wr2402"
+
+When PR is present and release >= 10.24, use PR-based version comparison.
+Otherwise fall back to RCPL-based comparison.
+
+Signed-off-by: Yi Zhao <yi.zhao@windriver.com>
+Signed-off-by: Zhixiong Chi <zhixiong.chi@windriver.com>
+---
+ pkg/detector/ospkg/wrlinux/wrlinux.go | 98 ++++++++++++++++++++++++++-
+ 1 file changed, 95 insertions(+), 3 deletions(-)
+
+diff --git a/pkg/detector/ospkg/wrlinux/wrlinux.go b/pkg/detector/ospkg/wrlinux/wrlinux.go
+index 4600104e2..adfbab81a 100644
+--- a/pkg/detector/ospkg/wrlinux/wrlinux.go
++++ b/pkg/detector/ospkg/wrlinux/wrlinux.go
+@@ -107,9 +107,21 @@ func (s *Scanner) Detect(ctx context.Context, osVer string, _ *ftypes.Repository
+ 				vulns = append(vulns, vuln)
+ 				continue
+ 			}
+-			if osVerLT(osVer, strings.Split(adv.FixedVersion, " ")[0]) {
+-				vuln.FixedVersion = adv.FixedVersion
+-				vulns = append(vulns, vuln)
++
++			release := OsVerToRelease(osVer)
++			prVer := extractPR(adv.FixedVersion)
++			if !osVerLT(release, "10.24") && prVer != "" {
++				// PR format or mixed format, compare using PR value
++				if pkgVerLT(vuln.InstalledVersion, prVer) {
++					vuln.FixedVersion = adv.FixedVersion
++					vulns = append(vulns, vuln)
++				}
++			} else {
++				// RCPL format or older release, use original logic
++				if osVerLT(osVer, strings.Split(adv.FixedVersion, " ")[0]) {
++					vuln.FixedVersion = adv.FixedVersion
++					vulns = append(vulns, vuln)
++				}
+ 			}
+ 		}
+ 	}
+@@ -161,3 +173,83 @@ func OsVerToRelease(osVer string) string {
+ 	}
+ 	return strings.Join(s[:2], ".")
+ }
++
++// extractPR extracts the PR portion from FixedVersion.
++// Supports three formats:
++//   "wr2402"             -> "wr2402"
++//   "10.24.33.7,wr2402"  -> "wr2402"
++//   "10.24.33.7"         -> "" (no PR)
++func extractPR(fixedVersion string) string {
++	// Mixed format: comma-separated, take the part starting with "wr"
++	if idx := strings.Index(fixedVersion, ",wr"); idx != -1 {
++		return fixedVersion[idx+1:]
++	}
++	// Pure PR format: starts with "wr"
++	if strings.HasPrefix(fixedVersion, "wr") {
++		return fixedVersion
++	}
++	// Pure RCPL format
++	return ""
++}
++
++// pkgVerLT returns true if s1 is strictly less than s2 by PR version.
++// s1 is the installed package version (e.g. "curl-8.7.1-r0.wr2404")
++// s2 is the fixed PR version (e.g. "wr2404.1")
++func pkgVerLT(s1, s2 string) bool {
++	s1PR := GetVerPR(s1)
++	s2PR := GetVerPR(s2)
++
++	s1_spl := strings.Split(s1PR, ".")
++	s2_spl := strings.Split(s2PR, ".")
++
++	a1 := SetVerArray(s1_spl)
++	a2 := SetVerArray(s2_spl)
++
++	return CompareVerArray(a1, a2)
++}
++
++// GetVerPR extracts the PR numeric portion from a version string.
++// "curl-8.7.1-r0.wr2404"  -> "2404"
++// "wr2404.1"              -> "2404.1"
++// "2404.1"                -> "2404.1"
++func GetVerPR(s string) string {
++	// Package version format: xxx.wrXXXX
++	if idx := strings.LastIndex(s, ".wr"); idx != -1 {
++		return s[idx+3:]
++	}
++	// Pure PR format: wrXXXX
++	if strings.HasPrefix(s, "wr") {
++		return s[2:]
++	}
++	return s
++}
++
++// SetVerArray puts PR version segments into a fixed-size array of 5 elements.
++// e.g. "2404.1" -> [2404, 1, 0, 0, 0]
++func SetVerArray(s []string) [5]int {
++	arr := [5]int{}
++
++	for i := range s {
++		n, err := strconv.Atoi(s[i])
++		if err != nil {
++			continue
++		}
++		arr[i] = n
++	}
++
++	return arr
++}
++
++// CompareVerArray compares two version arrays element by element.
++// Returns true if a1 < a2.
++func CompareVerArray(a1, a2 [5]int) bool {
++	for i := 0; i < 5; i++ {
++		if a1[i] < a2[i] {
++			return true
++		}
++		if a1[i] > a2[i] {
++			return false
++		}
++	}
++	return false
++}
+-- 
+2.49.0
+

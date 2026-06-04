@@ -5,8 +5,8 @@
 
 # Constants
 
-VER_TRIVY="v0.56.2"
-VER_VULN_LIST_UPDATE="8b61bbff7ce6311eff2897745e37ed37a21b7d56"
+VER_TRIVY="v0.71.0"
+VER_VULN_LIST_UPDATE="fda5655297cc6531f80807619aca21649a1c01c9"
 
 # Notes:
 #   VER_TRIVY           : Desired Trivy release (ends in '.1','.2',...)
@@ -165,6 +165,9 @@ function install {
     rm -rf vendor/github.com/aquasecurity/trivy-db/
     # Set up the correct reference to trivy-db in trivy vendor.
     ln -s "$(pwd)/../$REPO_PATH_TRIVY_DB" vendor/github.com/aquasecurity/trivy-db
+    if ! grep -q "github.com/aquasecurity/trivy-db/pkg/vulnsrc/wrlinux" vendor/modules.txt; then
+        sed -i '/trivy-db\/pkg\/vulnsrc\/wolfi/a github.com/aquasecurity/trivy-db/pkg/vulnsrc/wrlinux' vendor/modules.txt
+    fi
     popd || return 1
     apply_patch "$REPO_PATH_TRIVY" "$PATCH_DIR" || return 1
     apply_patch "$REPO_PATH_VULN_LIST_UPDATE" "$PATCH_DIR" || return 1
@@ -183,7 +186,7 @@ function install {
 
     # Build trivy binary.
     pushd "$REPO_PATH_TRIVY" || return 1
-    go build -ldflags "-s -w -X=github.com/aquasecurity/trivy/pkg/version/app.ver=$(git describe --tags --always)" ./cmd/trivy
+    GOEXPERIMENT=jsonv2 go build -ldflags "-s -w -X=github.com/aquasecurity/trivy/pkg/version/app.ver=$(git describe --tags --always)" ./cmd/trivy
     popd || return 1
     if [ $phase -eq 4 ] ; then
         return

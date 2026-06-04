@@ -1,7 +1,7 @@
-From c07ba64ab87205d09a062af2dba5b67fe1937977 Mon Sep 17 00:00:00 2001
+From 5c6914fd47f6cb16b34b451310ec8ebdf6543f0a Mon Sep 17 00:00:00 2001
 From: Dapeng Yu <dapeng.yu@windriver.com>
 Date: Tue, 22 Oct 2024 18:27:47 +0800
-Subject: feat(wrlinux): Add SBOM support for Wind River Linux
+Subject: [PATCH 2/3] feat(wrlinux): Add SBOM support for Wind River Linux
 
 Signed-off-by: Dapeng Yu <dapeng.yu@windriver.com>
 ---
@@ -9,18 +9,18 @@ Signed-off-by: Dapeng Yu <dapeng.yu@windriver.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/pkg/purl/purl.go b/pkg/purl/purl.go
-index a7b1cb918..a682614ce 100644
+index d6a0ffc56..a967a2895 100644
 --- a/pkg/purl/purl.go
 +++ b/pkg/purl/purl.go
-@@ -480,7 +480,7 @@ func purlType(t ftypes.TargetType) string {
+@@ -487,7 +487,7 @@ func purlType(t ftypes.TargetType) string {
  	case ftypes.RedHat, ftypes.CentOS, ftypes.Rocky, ftypes.Alma,
  		ftypes.Amazon, ftypes.Fedora, ftypes.Oracle, ftypes.OpenSUSE,
  		ftypes.OpenSUSELeap, ftypes.OpenSUSETumbleweed, ftypes.SLES, ftypes.SLEMicro, ftypes.Photon,
--		ftypes.Azure, ftypes.CBLMariner:
-+		ftypes.Azure, ftypes.CBLMariner, ftypes.WRLinux:
+-		ftypes.Azure, ftypes.CBLMariner, ftypes.CoreOS:
++		ftypes.Azure, ftypes.CBLMariner, ftypes.CoreOS, ftypes.WRLinux:
  		return packageurl.TypeRPM
- 	case TypeOCI:
- 		return packageurl.TypeOCI
+ 	case ftypes.Bottlerocket:
+ 		return packageurlTypeBottlerocket
 -- 
-2.47.0
+2.49.0
 
